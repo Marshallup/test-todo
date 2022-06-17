@@ -1,27 +1,103 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js + TypeScript App"/>
+  <h1>Test todos</h1>
+  <TodoList
+    v-if="todos.length"
+    :items="todos"
+  >
+    <template #header>
+      <BaseButton @click="openModal">
+        Добавить задачу
+      </BaseButton>
+    </template>
+  </TodoList>
+  <div
+    v-else-if="isLoadingTodos"
+    class="todos-loader"
+  >
+    Идет загрузка...
+  </div>
+  <div v-else-if="isErrorRequestTodos" class="error-todos">
+    Ошибка при запросе списка
+    <BaseButton class="error-todos-btn" @click="loadTodos">
+      Повторый запрос
+    </BaseButton>
+  </div>
+
+  <TodoCreateModalVue
+    v-if="isShowModal"
+    :show="isShowModal"
+    @add-todo="addTodo"
+    @close-modal="hideModal"
+  />
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
-import HelloWorld from './components/HelloWorld.vue';
+<script lang="ts" setup>
+import { onMounted, ref, unref } from 'vue';
+import { fetchTodos } from './services/todo.service';
+import { TodoItemType } from './types/Todos.types';
+import TodoCreateModalVue from './components/TodoCreateModal.vue';
+import TodoList from './components/TodoList.vue';
+import BaseButton from './components/BaseButton.vue';
 
-export default defineComponent({
-  name: 'App',
-  components: {
-    HelloWorld,
-  },
+const isShowModal = ref(false);
+const isLoadingTodos = ref(true);
+const isErrorRequestTodos = ref(false);
+const todos = ref<TodoItemType[]>([]);
+
+async function loadTodos() {
+  isLoadingTodos.value = true;
+  isErrorRequestTodos.value = false;
+  await fetchTodos()
+    .then((data) => {
+      todos.value = data;
+    })
+    .catch(() => {
+      isErrorRequestTodos.value = true;
+    })
+    .finally(() => {
+      isLoadingTodos.value = false;
+    });
+}
+
+function openModal() {
+  document.body.classList.add('lock');
+  isShowModal.value = true;
+}
+function hideModal() {
+  document.body.classList.remove('lock');
+  isShowModal.value = false;
+}
+function addTodo(todo: TodoItemType) {
+  todos.value.pop();
+  todos.value = [
+    todo,
+    ...unref(todos),
+  ];
+  hideModal();
+}
+
+onMounted(async () => {
+  await loadTodos();
 });
+
+</script>
+<script lang="ts">
+export default {
+  name: 'App',
+};
 </script>
 
-<style lang="scss">
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+<style lang="scss" scoped>
+.todos-loader {
+  font-size: 20px;
   text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+}
+.error-todos {
+  text-align: center;
+  max-width: 400px;
+  margin: 0 auto;
+  &-btn {
+    margin-top: 10px;
+  }
 }
 </style>
