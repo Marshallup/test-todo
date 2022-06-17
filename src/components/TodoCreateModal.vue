@@ -22,7 +22,7 @@
                   :id="item.id"
                   :type="item.type || 'text'"
                   v-model="item.value"
-                  @change="validateItem(item)"
+                  @input="validateItem(item)"
                 />
                 <select
                   v-if="item.tag === 'select'"
